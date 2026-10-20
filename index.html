@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的专属工作台</title>
+<style>
+  :root {
+    --green: #5F7A3D;
+    --green-dark: #46592B;
+    --green-light: #EDF2E4;
+    --green-mid: #C9D8AF;
+    --bg: #F7F6F2;
+    --card: #FFFFFF;
+    --text: #2E2C28;
+    --muted: #8A877E;
+    --line: #E5E3DC;
+    --red: #C0554A;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text);
+    height: 100vh; display: flex; overflow: hidden;
+  }
+  .sidebar {
+    width: 230px; background: var(--card); border-right: 1px solid var(--line);
+    padding: 22px 14px; display: flex; flex-direction: column; flex-shrink: 0;
+  }
+  .brand { padding: 0 10px 16px; border-bottom: 1px solid var(--line); }
+  .brand h1 { font-size: 20px; color: var(--green-dark); outline: none; cursor: text; }
+  .brand h1:focus { background: var(--green-light); border-radius: 4px; }
+  .brand p { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .sync-btn {
+    width: 100%; margin-top: 14px; border: 1px solid var(--green-mid);
+    background: var(--green-light); color: var(--green-dark);
+    border-radius: 10px; padding: 10px; font-size: 13.5px; cursor: pointer; font-family: inherit;
+  }
+  .sync-btn:hover { background: var(--green); color: #fff; }
+  .sync-state { font-size: 11px; color: var(--muted); text-align: center; margin-top: 6px; }
+  nav { margin-top: 12px; flex: 1; overflow-y: auto; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 10px;
+    font-size: 14px; cursor: pointer; color: var(--text); margin-bottom: 2px;
+    border: none; background: none; width: 100%; text-align: left; font-family: inherit;
+  }
+  .nav-item:hover { background: var(--bg); }
+  .nav-item.active { background: var(--green); color: #fff; font-weight: 500; }
+  .nav-item .icon { font-size: 15px; width: 20px; text-align: center; }
+  .side-foot { font-size: 11px; color: var(--muted); padding: 10px 10px 0; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 6px; }
+  .side-foot button { font-size: 11px; padding: 5px 9px; border-radius: 7px; border: 1px solid var(--line); background: #fff; color: var(--muted); cursor: pointer; font-family: inherit; }
+  .side-foot button:hover { color: var(--green-dark); border-color: var(--green-mid); }
+
+  .main { flex: 1; overflow-y: auto; padding: 26px 34px 60px; }
+  .page { display: none; max-width: 860px; margin: 0 auto; }
+  .page.active { display: block; }
+  .page-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 6px; }
+  .page-head h2 { font-size: 19px; font-weight: 500; }
+  .page-head .sub { font-size: 12px; color: var(--muted); }
+  .datebar { display: flex; align-items: center; gap: 10px; margin: 14px 0 18px; flex-wrap: wrap; }
+  .datebar input[type=date] { border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font-size: 13px; font-family: inherit; background: #fff; }
+  .today-chip { font-size: 12px; color: var(--green-dark); background: var(--green-light); padding: 6px 12px; border-radius: 999px; }
+  .progress-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .progress-track { flex: 1; height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--green); border-radius: 99px; width: 0; transition: width .25s; }
+  .progress-text { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 14px; }
+  .add-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .add-row input[type=text], .add-row input[type=url], .add-row input[type=number] {
+    flex: 1; min-width: 140px; border: 1px solid var(--line); border-radius: 9px;
+    padding: 10px 12px; font-size: 14px; font-family: inherit; background: #fff;
+  }
+  .add-row input:focus, textarea:focus { outline: 2px solid var(--green-mid); border-color: var(--green); }
+  .btn { border: none; background: var(--green); color: #fff; border-radius: 9px; padding: 10px 18px; font-size: 14px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+  .btn:hover { background: var(--green-dark); }
+  .btn-ghost { border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 9px; padding: 10px 14px; font-size: 13px; cursor: pointer; font-family: inherit; }
+  .btn-ghost:hover { color: var(--green-dark); border-color: var(--green-mid); }
+
+  .task { display: flex; align-items: center; gap: 12px; padding: 11px 6px; border-bottom: 1px solid var(--line); }
+  .task:last-child { border-bottom: none; }
+  .task input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--green); cursor: pointer; flex-shrink: 0; }
+  .task .txt { flex: 1; font-size: 14px; word-break: break-all; }
+  .task.done .txt { text-decoration: line-through; color: var(--muted); }
+  .task .del, .idea .del, .memo .del { border: none; background: none; color: #C9C6BD; cursor: pointer; font-size: 14px; padding: 4px 6px; border-radius: 6px; }
+  .task .del:hover, .idea .del:hover, .memo .del:hover { color: var(--red); background: #FAF0EF; }
+  .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 26px 0; }
+
+  .idea-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .idea { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; position: relative; }
+  .idea .tag { display: inline-block; font-size: 11px; padding: 3px 9px; border-radius: 99px; background: var(--green-light); color: var(--green-dark); margin-bottom: 8px; }
+  .idea .tag.hot { background: #FBEDE4; color: #A65A2E; }
+  .idea h4 { font-size: 14px; font-weight: 500; margin-bottom: 6px; word-break: break-all; }
+  .idea p { font-size: 12.5px; color: var(--muted); line-height: 1.6; word-break: break-all; }
+  .idea a { font-size: 12px; color: var(--green); text-decoration: none; word-break: break-all; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--muted); font-weight: 400; padding: 9px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .form-grid input, .form-grid select { border: 1px solid var(--line); border-radius: 9px; padding: 9px 12px; font-size: 13px; font-family: inherit; width: 100%; background: #fff; }
+  .form-grid input.full { grid-column: 1 / -1; }
+
+  .memo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+  .memo { background: #FDF9E8; border: 1px solid #EFE7C2; border-radius: var(--radius); padding: 14px 16px; position: relative; }
+  .memo:nth-child(3n+2) { background: #EDF2E4; border-color: #D8E2C4; }
+  .memo:nth-child(3n+3) { background: #EDF1F7; border-color: #CFDCEC; }
+  .memo p { font-size: 13.5px; line-height: 1.7; white-space: pre-wrap; word-break: break-all; }
+
+  .habit { margin-bottom: 18px; }
+  .habit-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .habit-head .name { font-size: 14px; font-weight: 500; }
+  .habit-head .streak { font-size: 12px; color: var(--green-dark); background: var(--green-light); padding: 4px 10px; border-radius: 99px; }
+  .dots { display: flex; gap: 6px; flex-wrap: wrap; }
+  .dot { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: #fff; cursor: pointer; font-size: 10px; color: var(--muted); display: flex; align-items: center; justify-content: center; font-family: inherit; }
+  .dot.on { background: var(--green); border-color: var(--green); color: #fff; }
+  .dot.today { border-color: var(--green-dark); border-width: 2px; }
+
+  .mask { position: fixed; inset: 0; background: rgba(30,28,24,.38); display: none; align-items: center; justify-content: center; z-index: 60; padding: 16px; }
+  .mask.show { display: flex; }
+  .modal { background: #fff; border-radius: 16px; padding: 22px 24px; width: min(480px, 94vw); max-height: 88vh; overflow: auto; }
+  .modal h3 { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+  .modal .tip { font-size: 12.5px; color: var(--muted); line-height: 1.7; margin-bottom: 14px; }
+  .modal textarea { width: 100%; border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; font-size: 12px; font-family: ui-monospace, Menlo, Consolas, monospace; resize: vertical; min-height: 74px; }
+  .modal .row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .modal .meta { font-size: 11.5px; color: var(--muted); margin-top: 8px; word-break: break-all; }
+  .step { font-size: 13px; line-height: 1.8; margin-bottom: 6px; }
+  .step b { color: var(--green-dark); font-weight: 500; }
+
+  #toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: #fff; font-size: 13px; padding: 10px 20px; border-radius: 99px; opacity: 0; pointer-events: none; transition: all .25s; z-index: 99; }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* 窄屏（手机 / 小预览窗）：侧边栏依然固定在左侧，收成图标栏 */
+  @media (max-width: 720px) {
+    body { flex-direction: row; }
+    .sidebar {
+      width: 62px; padding: 12px 6px; flex-shrink: 0;
+      border-right: 1px solid var(--line); border-bottom: none; align-items: center;
+    }
+    .brand { padding: 0 0 10px; width: 100%; text-align: center; border-bottom: 1px solid var(--line); }
+    .brand h1 { font-size: 12px; line-height: 1.3; word-break: break-all; }
+    .brand p { display: none; }
+    .sync-btn { font-size: 16px; padding: 9px 0; letter-spacing: 0; }
+    .sync-state { font-size: 9.5px; line-height: 1.4; }
+    nav { display: block; width: 100%; margin-top: 10px; overflow-y: auto; overflow-x: hidden; }
+    .nav-item { justify-content: center; padding: 11px 0; gap: 0; margin-bottom: 4px; }
+    .nav-item .icon { font-size: 18px; width: auto; }
+    .nav-item .label { display: none; }
+    .side-foot { flex-direction: column; gap: 4px; width: 100%; }
+    .side-foot button { font-size: 10px; padding: 6px 2px; }
+    .main { padding: 16px 14px 60px; min-width: 0; }
+    .form-grid { grid-template-columns: 1fr; }
+    .page-head h2 { font-size: 17px; }
+  }
+  @media (max-width: 400px) {
+    .sidebar { width: 54px; padding: 10px 4px; }
+    .nav-item .icon { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="brand">
+    <h1 id="ownerName" contenteditable="true" spellcheck="false">我的工作台</h1>
+    <p>点我改名 · 专属创作工作台</p>
+  </div>
+  <button class="sync-btn" onclick="openSync()">☁ 云同步（手机 ⇄ 电脑）</button>
+  <div class="sync-state" id="syncState">尚未同步</div>
+  <nav id="nav"></nav>
+  <div class="side-foot">
+    <button onclick="exportData()">导出备份</button>
+    <button onclick="document.getElementById('importFile').click()">导入备份</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+</aside>
+
+<main class="main">
+  <section class="page" id="page-plan">
+    <div class="page-head"><h2>每日计划</h2><span class="sub">完成一项打个勾，进度一目了然</span></div>
+    <div class="datebar">
+      <input type="date" id="planDate" onchange="renderPlan()">
+      <span class="today-chip" id="planWeekday"></span>
+      <button class="btn-ghost" onclick="gotoToday()">回到今天</button>
+      <button class="btn-ghost" onclick="copyYesterday()">复制昨天未完成</button>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-track"><div class="progress-fill" id="planFill"></div></div>
+      <span class="progress-text" id="planProgress"></span>
+    </div>
+    <div class="card">
+      <div class="add-row">
+        <input type="text" id="planInput" placeholder="今天要做什么？回车快速添加" onkeydown="if(event.key==='Enter')addTask()">
+        <button class="btn" onclick="addTask()">添加</button>
+      </div>
+      <div id="taskList"></div>
+    </div>
+  </section>
+
+  <section class="page" id="page-idea">
+    <div class="page-head"><h2>选题灵感</h2><span class="sub">想到就记一条，别让好点子过夜</span></div>
+    <div class="card" style="margin-top:16px">
+      <div class="add-row">
+        <input type="text" id="ideaTitle" placeholder="选题标题" style="flex:2">
+        <input type="text" id="ideaNote" placeholder="切入角度 / 备注（可不填）" style="flex:2">
+        <button class="btn" onclick="addIdea()">记下来</button>
+      </div>
+    </div>
+    <div class="idea-grid" id="ideaGrid"></div>
+  </section>
+
+  <section class="page" id="page-hot">
+    <div class="page-head"><h2>爆款热点 / 二创</h2><span class="sub">收藏值得拆解和二创的爆款</span></div>
+    <div class="card" style="margin-top:16px">
+      <div class="add-row">
+        <input type="text" id="hotTitle" placeholder="爆款标题或热点" style="flex:2">
+        <input type="url" id="hotLink" placeholder="链接（可不填）" style="flex:2">
+        <button class="btn" onclick="addHot()">收藏</button>
+      </div>
+    </div>
+    <div class="idea-grid" id="hotGrid"></div>
+  </section>
+
+  <section class="page" id="page-review">
+    <div class="page-head"><h2>内容复盘</h2><span class="sub">每发一条记一笔，数据会告诉你方向</span></div>
+    <div class="card" style="margin-top:16px">
+      <div class="form-grid">
+        <input type="date" id="rvDate">
+        <select id="rvPlatform"><option>小红书</option><option>抖音</option><option>视频号</option><option>公众号</option><option>B站</option><option>快手</option><option>其他</option></select>
+        <input type="text" id="rvTopic" placeholder="选题 / 标题" class="full">
+        <input type="number" id="rvPlays" placeholder="播放量" min="0">
+        <input type="number" id="rvLikes" placeholder="点赞" min="0">
+        <input type="number" id="rvFans" placeholder="涨粉" min="0">
+        <input type="text" id="rvNote" placeholder="一句话复盘（为什么好 / 为什么差）" class="full">
+      </div>
+      <button class="btn" onclick="addReview()">记录这条</button>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>日期</th><th>平台</th><th>选题</th><th>播放</th><th>点赞</th><th>涨粉</th><th>复盘</th><th></th></tr></thead>
+        <tbody id="reviewBody"></tbody>
+      </table>
+      <div class="empty" id="reviewEmpty" style="display:none">还没有记录，发完第一条就来记一笔吧</div>
+    </div>
+  </section>
+
+  <section class="page" id="page-memo">
+    <div class="page-head"><h2>备忘录</h2><span class="sub">随手贴，什么都行</span></div>
+    <div class="card" style="margin-top:16px">
+      <div class="add-row">
+        <input type="text" id="memoInput" placeholder="记点什么…回车快速添加" onkeydown="if(event.key==='Enter')addMemo()">
+        <button class="btn" onclick="addMemo()">贴一张</button>
+      </div>
+    </div>
+    <div class="memo-grid" id="memoGrid"></div>
+  </section>
+
+  <section class="page" id="page-learn">
+    <div class="page-head"><h2>学习打卡</h2><span class="sub">点一下日期格就算打卡，连续打卡会显示连胜</span></div>
+    <div id="habitGroups"></div>
+  </section>
+
+  <section class="page" id="page-parttime">
+    <div class="page-head"><h2>兼职</h2><span class="sub">机会、排期、时长、收入，一笔一笔记清楚</span></div>
+    <div class="card" style="margin-top:16px">
+      <div class="form-grid">
+        <input type="date" id="ptDate">
+        <select id="ptStatus"><option>进行中</option><option>待面试</option><option>已投简历</option><option>已结算</option><option>已放弃</option></select>
+        <input type="text" id="ptName" placeholder="兼职名称 / 平台，例如：XX咖啡 周末班" class="full">
+        <input type="number" id="ptHours" placeholder="时长（小时）" min="0" step="0.5">
+        <input type="number" id="ptIncome" placeholder="收入（元）" min="0" step="1">
+        <input type="text" id="ptNote" placeholder="备注（联系人 / 地址 / 注意事项）" class="full">
+      </div>
+      <button class="btn" onclick="addParttime()">记一笔</button>
+    </div>
+    <div class="card">
+      <div id="ptSummary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+      <table>
+        <thead><tr><th>日期</th><th>名称</th><th>状态</th><th>时长</th><th>收入</th><th>备注</th><th></th></tr></thead>
+        <tbody id="ptBody"></tbody>
+      </table>
+      <div class="empty" id="ptEmpty" style="display:none">还没有兼职记录，投出第一份就记一笔</div>
+    </div>
+  </section>
+</main>
+
+<div class="mask" id="syncMask" onclick="if(event.target===this)closeSync()">
+  <div class="modal">
+    <h3>☁ 手机 ⇄ 电脑 同步</h3>
+    <p class="tip">数据不走任何服务器，打包成一个链接。<b>在 A 设备生成 → 发给 B 设备打开</b>，两边内容自动合并（谁的新听谁的）。</p>
+    <div class="step"><b>1.</b> 在这台设备点「生成同步链接」并复制</div>
+    <div class="step"><b>2.</b> 用微信「文件传输助手」发给另一台设备</div>
+    <div class="step"><b>3.</b> 另一台设备打开工作台，把链接粘进下面的框，点「合并进来」</div>
+    <div class="row">
+      <button class="btn" onclick="genLink()">生成同步链接</button>
+      <button class="btn-ghost" onclick="copyLink()">复制</button>
+    </div>
+    <textarea id="linkBox" placeholder="这里会显示同步链接；也可以把对方发来的链接粘到这里，然后点「合并进来」"></textarea>
+    <div class="row">
+      <button class="btn" onclick="mergeLink()">合并进来</button>
+      <button class="btn-ghost" onclick="closeSync()">关闭</button>
+    </div>
+    <div class="meta" id="linkMeta"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const KEY = 'my_workspace_v1';
+let DB = JSON.parse(localStorage.getItem(KEY) || 'null') || {
+  name: '我的工作台', up: 0, lastSync: 0,
+  tasks: {}, ideas: [], hots: [], reviews: [], memos: [], habits: [], parttime: []
+};
+const HABIT_GROUPS = ['身体练习', '英语学习'];
+function save() { DB.up = Date.now(); localStorage.setItem(KEY, JSON.stringify(DB)); }
+function toast(msg) { const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 1800); }
+function fmtDate(d) { const p = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
+function uid() { return Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-5); }
+const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
+
+/* ---------- 同步核心 ---------- */
+function b64enc(str) {
+  const bytes = new TextEncoder().encode(str); let bin = '';
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64dec(s) {
+  s = s.replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  const bin = atob(s); const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+function ensureIds() {
+  Object.values(DB.tasks || {}).forEach(arr => arr.forEach(t => {
+    if (!t.id) t.id = uid(); if (!t.up) t.up = Date.now();
+  }));
+  ['ideas', 'hots', 'reviews', 'memos', 'parttime'].forEach(k => (DB[k] || []).forEach(it => {
+    if (!it.id) it.id = uid(); if (!it.up) it.up = it.ts || Date.now();
+  }));
+  (DB.habits || []).forEach(h => {
+    if (!h.id) h.id = uid();
+    if (!h.group) {
+      h.group = /英语|english|单词|口语|听力/i.test(h.name) ? '英语学习' : '身体练习';
+    }
+  });
+  DB.up = DB.up || 0;
+}
+function mergeArr(a, b, keyFn) {
+  const map = new Map();
+  [...a, ...b].forEach(item => {
+    const k = keyFn(item); const prev = map.get(k);
+    if (!prev || (item.up || 0) > (prev.up || 0)) map.set(k, item);
+  });
+  return [...map.values()].sort((x, y) => (y.up || 0) - (x.up || 0));
+}
+function mergeDB(inc) {
+  const A = DB, B = inc;
+  const out = {
+    name: (B.name && (B.up || 0) > (A.up || 0)) ? B.name : A.name,
+    up: Math.max(A.up || 0, B.up || 0), lastSync: Date.now(),
+    tasks: {}, ideas: [], hots: [], reviews: [], memos: [], habits: [], parttime: []
+  };
+  const dates = new Set([...Object.keys(A.tasks || {}), ...Object.keys(B.tasks || {})]);
+  dates.forEach(d => { out.tasks[d] = mergeArr(A.tasks[d] || [], B.tasks[d] || [], x => x.id || x.t); });
+  ['ideas', 'hots', 'reviews', 'memos', 'parttime'].forEach(k => {
+    out[k] = mergeArr(A[k] || [], B[k] || [], x => x.id || (x.title || x.text || x.topic || x.name || ''));
+  });
+  [...(A.habits || []), ...(B.habits || [])].forEach(h => {
+    const g = h.group || '身体练习';
+    const ex = out.habits.find(x => x.name === h.name && (x.group || '身体练习') === g);
+    if (ex) Object.assign(ex.days, h.days || {});
+    else out.habits.push({ id: h.id || uid(), name: h.name, group: g, days: Object.assign({}, h.days || {}) });
+  });
+  return out;
+}
+function openSync() { ensureIds(); document.getElementById('syncMask').classList.add('show'); document.getElementById('linkBox').value = ''; document.getElementById('linkMeta').textContent = ''; }
+function closeSync() { document.getElementById('syncMask').classList.remove('show'); }
+function genLink() {
+  ensureIds(); save();
+  const payload = b64enc(JSON.stringify(DB));
+  const base = location.href.split('#')[0];
+  const url = base + '#s=' + payload;
+  document.getElementById('linkBox').value = url;
+  document.getElementById('linkMeta').textContent = '链接长度 ' + url.length + ' 字符 · 数据已包含全部板块';
+  copyLink();
+}
+function copyLink() {
+  const box = document.getElementById('linkBox');
+  if (!box.value) { genLink(); return; }
+  box.select(); box.setSelectionRange(0, 999999);
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) { }
+  if (!ok && navigator.clipboard) {
+    navigator.clipboard.writeText(box.value).then(() => toast('已复制到剪贴板')).catch(() => toast('请手动全选复制'));
+  } else { toast(ok ? '已复制到剪贴板' : '请手动全选复制'); }
+}
+function mergeLink() {
+  const raw = document.getElementById('linkBox').value.trim();
+  if (!raw) { toast('先粘贴一个同步链接'); return; }
+  const m = raw.match(/[#&]s=([A-Za-z0-9\-_]+)/);
+  let payload = m ? m[1] : raw;
+  try {
+    const inc = JSON.parse(b64dec(payload));
+    ensureIds();
+    DB = mergeDB(inc);
+    save();
+    closeSync(); refreshAll(); showSyncState();
+    toast('同步完成，两边内容已合并');
+  } catch (e) { toast('链接不完整或已损坏'); }
+}
+function showSyncState() {
+  const el = document.getElementById('syncState');
+  if (!DB.lastSync) { el.textContent = '尚未同步'; return; }
+  const d = new Date(DB.lastSync); const p = n => String(n).padStart(2, '0');
+  el.textContent = '上次同步 ' + (d.getMonth() + 1) + '/' + d.getDate() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function tryAutoSync() {
+  const m = location.hash.match(/[#&]s=([A-Za-z0-9\-_]+)/);
+  if (!m) return;
+  try {
+    const inc = JSON.parse(b64dec(m[1]));
+    ensureIds(); DB = mergeDB(inc); save();
+    history.replaceState(null, '', location.pathname + location.search);
+    toast('已自动合并同步数据');
+  } catch (e) { toast('同步链接无法解析'); }
+}
+
+/* ---------- 导航 ---------- */
+const PAGES = [
+  { id: 'plan', icon: '📋', label: '每日计划' },
+  { id: 'idea', icon: '💡', label: '选题灵感' },
+  { id: 'hot', icon: '🔥', label: '热点 / 二创' },
+  { id: 'review', icon: '📊', label: '内容复盘' },
+  { id: 'parttime', icon: '💼', label: '兼职' },
+  { id: 'memo', icon: '📝', label: '备忘录' },
+  { id: 'learn', icon: '🎯', label: '学习打卡' }
+];
+function renderNav(active) {
+  document.getElementById('nav').innerHTML = PAGES.map(p =>
+    `<button class="nav-item ${p.id === active ? 'active' : ''}" title="${p.label}" onclick="go('${p.id}')"><span class="icon">${p.icon}</span><span class="label">${p.label}</span></button>`).join('');
+}
+function go(id) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  renderNav(id); refreshCurrent();
+}
+function refreshAll() { renderPlan(); renderIdeas(); renderHots(); renderReviews(); renderMemos(); renderHabits(); renderParttime(); }
+function refreshCurrent() {
+  const cur = (document.querySelector('.page.active') || {}).id || 'page-plan';
+  if (cur === 'page-plan') renderPlan(); if (cur === 'page-idea') renderIdeas();
+  if (cur === 'page-hot') renderHots(); if (cur === 'page-review') renderReviews();
+  if (cur === 'page-memo') renderMemos(); if (cur === 'page-learn') renderHabits();
+  if (cur === 'page-parttime') renderParttime();
+}
+
+/* ---------- 每日计划 ---------- */
+function gotoToday() { document.getElementById('planDate').value = fmtDate(new Date()); renderPlan(); }
+function copyYesterday() {
+  const d = new Date(document.getElementById('planDate').value); d.setDate(d.getDate() - 1);
+  const undone = (DB.tasks[fmtDate(d)] || []).filter(t => !t.done);
+  if (!undone.length) { toast('昨天没有未完成的任务'); return; }
+  const key = document.getElementById('planDate').value;
+  DB.tasks[key] = (DB.tasks[key] || []).concat(undone.map(t => ({ id: uid(), t: t.t, done: false, up: Date.now() })));
+  save(); renderPlan(); toast('已复制 ' + undone.length + ' 条');
+}
+function renderPlan() {
+  const key = document.getElementById('planDate').value || fmtDate(new Date());
+  document.getElementById('planDate').value = key;
+  const d = new Date(key + 'T00:00:00');
+  document.getElementById('planWeekday').textContent =
+    d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日 星期' + WEEK[d.getDay()] + (key === fmtDate(new Date()) ? ' · 今天' : '');
+  const list = DB.tasks[key] || [];
+  const done = list.filter(t => t.done).length;
+  document.getElementById('planFill').style.width = list.length ? (done / list.length * 100) + '%' : '0';
+  document.getElementById('planProgress').textContent = list.length ? done + ' / ' + list.length + ' 已完成' : '今天还没有安排';
+  document.getElementById('taskList').innerHTML = list.length ? list.map((t, i) => `
+    <div class="task ${t.done ? 'done' : ''}">
+      <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTask('${key}',${i})">
+      <span class="txt">${esc(t.t)}</span>
+      <button class="del" onclick="delTask('${key}',${i})">✕</button>
+    </div>`).join('') : '<div class="empty">加一条今天要做的事吧</div>';
+}
+function addTask() {
+  const input = document.getElementById('planInput'); const v = input.value.trim();
+  if (!v) return;
+  const key = document.getElementById('planDate').value || fmtDate(new Date());
+  (DB.tasks[key] = DB.tasks[key] || []).push({ id: uid(), t: v, done: false, up: Date.now() });
+  save(); input.value = ''; renderPlan();
+}
+function toggleTask(key, i) { const t = DB.tasks[key][i]; t.done = !t.done; t.up = Date.now(); save(); renderPlan(); }
+function delTask(key, i) { DB.tasks[key].splice(i, 1); if (!DB.tasks[key].length) delete DB.tasks[key]; save(); renderPlan(); }
+
+/* ---------- 选题灵感 ---------- */
+function renderIdeas() {
+  const g = document.getElementById('ideaGrid');
+  g.innerHTML = DB.ideas.length ? DB.ideas.map((it, i) => `
+    <div class="idea"><button class="del" onclick="delItem('ideas',${i})">✕</button>
+      <span class="tag">💡 灵感</span><h4>${esc(it.title)}</h4>
+      ${it.note ? '<p>' + esc(it.note) + '</p>' : ''}
+      <p style="margin-top:8px;font-size:11px">${fmtDate(new Date(it.up || it.ts))}</p></div>`).join('')
+    : '<div class="empty" style="grid-column:1/-1">还没有灵感，想到什么先记下来</div>';
+}
+function addIdea() {
+  const t = document.getElementById('ideaTitle'), n = document.getElementById('ideaNote');
+  if (!t.value.trim()) { toast('先写个标题'); return; }
+  DB.ideas.unshift({ id: uid(), title: t.value.trim(), note: n.value.trim(), ts: Date.now(), up: Date.now() });
+  save(); t.value = ''; n.value = ''; renderIdeas(); toast('已记录');
+}
+function renderHots() {
+  const g = document.getElementById('hotGrid');
+  g.innerHTML = DB.hots.length ? DB.hots.map((it, i) => `
+    <div class="idea"><button class="del" onclick="delItem('hots',${i})">✕</button>
+      <span class="tag hot">🔥 热点</span><h4>${esc(it.title)}</h4>
+      ${it.link ? `<a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(shortUrl(it.link))} ↗</a>` : ''}
+      <p style="margin-top:8px;font-size:11px">${fmtDate(new Date(it.up || it.ts))}</p></div>`).join('')
+    : '<div class="empty" style="grid-column:1/-1">刷到值得二创的爆款，丢链接进来</div>';
+}
+function addHot() {
+  const t = document.getElementById('hotTitle'), l = document.getElementById('hotLink');
+  if (!t.value.trim()) { toast('先写个标题'); return; }
+  DB.hots.unshift({ id: uid(), title: t.value.trim(), link: l.value.trim(), ts: Date.now(), up: Date.now() });
+  save(); t.value = ''; l.value = ''; renderHots(); toast('已收藏');
+}
+function shortUrl(u) { try { return new URL(u).hostname.replace('www.', ''); } catch (e) { return u.slice(0, 30); } }
+
+/* ---------- 复盘 ---------- */
+function renderReviews() {
+  document.getElementById('reviewBody').innerHTML = DB.reviews.map((r, i) => `
+    <tr><td style="white-space:nowrap">${r.date}</td><td style="white-space:nowrap">${esc(r.platform)}</td>
+      <td>${esc(r.topic)}</td><td>${num(r.plays)}</td><td>${num(r.likes)}</td><td>${num(r.fans)}</td>
+      <td style="color:var(--muted)">${esc(r.note || '—')}</td>
+      <td><button class="del" onclick="delItem('reviews',${i})">✕</button></td></tr>`).join('');
+  document.getElementById('reviewEmpty').style.display = DB.reviews.length ? 'none' : 'block';
+}
+function num(n) { return n ? Number(n).toLocaleString() : '—'; }
+function addReview() {
+  const r = {
+    id: uid(),
+    date: document.getElementById('rvDate').value || fmtDate(new Date()),
+    platform: document.getElementById('rvPlatform').value,
+    topic: document.getElementById('rvTopic').value.trim(),
+    plays: +document.getElementById('rvPlays').value || 0,
+    likes: +document.getElementById('rvLikes').value || 0,
+    fans: +document.getElementById('rvFans').value || 0,
+    note: document.getElementById('rvNote').value.trim(),
+    up: Date.now()
+  };
+  if (!r.topic) { toast('填一下选题'); return; }
+  DB.reviews.unshift(r); save();
+  ['rvTopic', 'rvPlays', 'rvLikes', 'rvFans', 'rvNote'].forEach(id => document.getElementById(id).value = '');
+  renderReviews(); toast('已记录');
+}
+
+/* ---------- 备忘录 ---------- */
+function renderMemos() {
+  const g = document.getElementById('memoGrid');
+  g.innerHTML = DB.memos.length ? DB.memos.map((m, i) => `
+    <div class="memo"><button class="del" onclick="delItem('memos',${i})">✕</button><p>${esc(m.text)}</p></div>`).join('')
+    : '<div class="empty" style="grid-column:1/-1">空空的，贴一张便签吧</div>';
+}
+function addMemo() {
+  const el = document.getElementById('memoInput');
+  if (!el.value.trim()) return;
+  DB.memos.unshift({ id: uid(), text: el.value.trim(), ts: Date.now(), up: Date.now() });
+  save(); el.value = ''; renderMemos();
+}
+
+/* ---------- 学习打卡 ---------- */
+function last14() { const a = []; for (let i = 13; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); a.push(d); } return a; }
+function streak(days) { let s = 0; const d = new Date(); if (!days[fmtDate(d)]) d.setDate(d.getDate() - 1); while (days[fmtDate(d)]) { s++; d.setDate(d.getDate() - 1); } return s; }
+function renderHabits() {
+  const days = last14();
+  const today = fmtDate(new Date());
+  document.getElementById('habitGroups').innerHTML = HABIT_GROUPS.map((g, gi) => {
+    const list = DB.habits.filter(h => (h.group || '身体练习') === g);
+    const doneToday = list.filter(h => h.days[today]).length;
+    return `<div class="card">
+      <div class="habit-head">
+        <span class="name">${gi === 0 ? '🧘' : '🔤'} ${g}</span>
+        <span class="streak">今日 ${doneToday} / ${list.length}${list.length ? ' · 最长 ' + Math.max(...list.map(h => streak(h.days))) + ' 天' : ''}</span>
+      </div>
+      ${list.length ? list.map(h => `
+        <div class="habit" style="margin-bottom:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-size:13.5px">${esc(h.name)}</span>
+            <span style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px">
+              🔥 连续 ${streak(h.days)} 天
+              <button class="del" onclick="delHabit('${h.id}')">✕</button>
+            </span>
+          </div>
+          <div class="dots">${days.map(d => {
+      const k = fmtDate(d);
+      return `<button class="dot ${h.days[k] ? 'on' : ''} ${k === today ? 'today' : ''}" onclick="toggleHabit('${h.id}','${k}')" title="${k}">${d.getMonth() + 1}/${d.getDate()}</button>`;
+    }).join('')}</div>
+        </div>`).join('') : '<div class="empty" style="padding:16px 0">还没有项目，下面加一个</div>'}
+      <div class="add-row" style="margin:12px 0 0">
+        <input type="text" id="habitInput${gi}" placeholder="添加一项，例如：${gi === 0 ? '拉伸 20 分钟' : '背 30 个单词'}" onkeydown="if(event.key==='Enter')addHabit(${gi})">
+        <button class="btn" onclick="addHabit(${gi})">添加</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function toggleHabit(id, k) {
+  const h = DB.habits.find(x => x.id === id); if (!h) return;
+  h.days[k] = !h.days[k]; if (!h.days[k]) delete h.days[k]; save(); renderHabits();
+}
+function delHabit(id) { DB.habits = DB.habits.filter(h => h.id !== id); save(); renderHabits(); }
+function addHabit(gi) {
+  const el = document.getElementById('habitInput' + gi);
+  if (!el || !el.value.trim()) return;
+  DB.habits.push({ id: uid(), name: el.value.trim(), group: HABIT_GROUPS[gi], days: {} });
+  save(); el.value = ''; renderHabits();
+}
+
+/* ---------- 兼职 ---------- */
+function renderParttime() {
+  const list = DB.parttime || [];
+  const now = new Date();
+  const thisMonth = fmtDate(now).slice(0, 7);
+  const monthIncome = list.filter(x => (x.date || '').slice(0, 7) === thisMonth).reduce((s, x) => s + (+x.income || 0), 0);
+  const totalIncome = list.reduce((s, x) => s + (+x.income || 0), 0);
+  const doing = list.filter(x => x.status === '进行中').length;
+  const pending = list.filter(x => x.status === '待面试' || x.status === '已投简历').length;
+  document.getElementById('ptSummary').innerHTML = [
+    ['本月收入', '¥' + monthIncome.toLocaleString()],
+    ['累计收入', '¥' + totalIncome.toLocaleString()],
+    ['进行中', doing + ' 个'],
+    ['待跟进', pending + ' 个']
+  ].map(([k, v]) => `<div style="background:var(--background-secondary,var(--bg));background:var(--bg);border-radius:10px;padding:10px 16px;flex:1;min-width:110px">
+      <div style="font-size:12px;color:var(--muted)">${k}</div>
+      <div style="font-size:19px;font-weight:500;margin-top:3px;color:var(--green-dark)">${v}</div></div>`).join('');
+  const color = { '进行中': '#0F6E56', '待面试': '#854F0B', '已投简历': '#185FA5', '已结算': '#5F5E5A', '已放弃': '#A32D2D' };
+  document.getElementById('ptBody').innerHTML = list.map((x, i) => `
+    <tr><td style="white-space:nowrap">${x.date}</td><td>${esc(x.name)}</td>
+      <td style="white-space:nowrap;color:${color[x.status] || 'inherit'}">${esc(x.status)}</td>
+      <td>${x.hours ? x.hours + ' h' : '—'}</td>
+      <td>${x.income ? '¥' + Number(x.income).toLocaleString() : '—'}</td>
+      <td style="color:var(--muted)">${esc(x.note || '—')}</td>
+      <td><button class="del" onclick="delItem('parttime',${i})">✕</button></td></tr>`).join('');
+  document.getElementById('ptEmpty').style.display = list.length ? 'none' : 'block';
+}
+function addParttime() {
+  const name = document.getElementById('ptName').value.trim();
+  if (!name) { toast('填一下兼职名称'); return; }
+  DB.parttime = DB.parttime || [];
+  DB.parttime.unshift({
+    id: uid(),
+    date: document.getElementById('ptDate').value || fmtDate(new Date()),
+    name: name,
+    status: document.getElementById('ptStatus').value,
+    hours: +document.getElementById('ptHours').value || 0,
+    income: +document.getElementById('ptIncome').value || 0,
+    note: document.getElementById('ptNote').value.trim(),
+    up: Date.now()
+  });
+  save();
+  ['ptName', 'ptHours', 'ptIncome', 'ptNote'].forEach(id => document.getElementById(id).value = '');
+  renderParttime(); toast('已记录');
+}
+
+/* ---------- 通用 ---------- */
+function delItem(arr, i) {
+  DB[arr].splice(i, 1); save();
+  if (arr === 'ideas') renderIdeas(); if (arr === 'hots') renderHots();
+  if (arr === 'reviews') renderReviews(); if (arr === 'memos') renderMemos();
+  if (arr === 'parttime') renderParttime(); if (arr === 'habits') renderHabits();
+}
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function exportData() {
+  ensureIds();
+  const blob = new Blob([JSON.stringify(DB, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = '工作台备份-' + fmtDate(new Date()) + '.json'; a.click(); toast('已导出备份文件');
+}
+function importData(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => { try { DB = JSON.parse(reader.result); save(); location.reload(); } catch (err) { toast('文件格式不对'); } };
+  reader.readAsText(f);
+}
+
+/* ---------- 启动 ---------- */
+document.getElementById('ownerName').textContent = DB.name || '我的工作台';
+document.getElementById('ownerName').addEventListener('blur', function () {
+  DB.name = this.textContent.trim() || '我的工作台';
+  this.textContent = DB.name; save(); toast('已保存');
+});
+document.getElementById('planDate').value = fmtDate(new Date());
+document.getElementById('rvDate').value = fmtDate(new Date());
+document.getElementById('ptDate').value = fmtDate(new Date());
+ensureIds();
+tryAutoSync();
+renderNav('plan');
+document.getElementById('page-plan').classList.add('active');
+renderPlan();
+showSyncState();
+</script>
+</body>
+</html>
